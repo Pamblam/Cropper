@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>TODO supply a title</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	</head>
+	<body>
+		<canvas id="canvas" style="width:50%;"></canvas>
+		<div><img src="" id="preview"></div>
+		<script src="cropper.js"></script>
+		<script>
+			var canvas = document.getElementById('canvas');
+			var preview = document.getElementById('preview');
+			crop(canvas, 'example.jpg').then(cropper=>{
+				cropper.oncrop(()=>{
+					console.log(cropper.datauri());
+					preview.src = cropper.datauri();
+				});
+			});
+		</script>
+	</body>
+</html>
