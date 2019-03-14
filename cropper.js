@@ -1,3 +1,11 @@
+
+/**
+ * Cropper is a simple plugin to allow users to crop images
+ * @author pamblam
+ * @license WTFPL
+ * @type Function
+ */
+
 var crop = (function(){
 	
 	function load_image(src){
