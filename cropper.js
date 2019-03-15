@@ -64,8 +64,8 @@ var crop = (function(){
 		var active_corner = null;
 		var lastx = 0, lasty = 0, xmovement = 0, ymovement = 0;
 		const getMousePos = e => {
-			var bounds = canvas.getBoundingClientRect();
-			var scale = canvas.width / parseFloat(bounds.width);
+			var bounds = ctx.canvas.getBoundingClientRect();
+			var scale = ctx.canvas.width / parseFloat(bounds.width);
 			var x = (e.clientX - bounds.left) * scale;
 			var y = (e.clientY - bounds.top) * scale;
 			return {canvasX: x, canvasY: y};
