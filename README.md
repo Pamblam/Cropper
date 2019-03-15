@@ -1,19 +1,32 @@
 ## Cropper
 
-a simple plugin to allow users to crop images
+A simple plugin to allow users to crop images
 
-https://pamblam.github.io/Cropper/
+Demo: https://pamblam.github.io/Cropper/
 
 #### Usage
 
-plugin exposes a single function: `crop` which accepts a canvas element as the first argument and an image path as the second argument. obviously the image must be CORS safe.
+The plugin exposes a single function: `crop`:
 
-the `crop` function returns a promise which resolves to an object with 2 properties: 
+```
+/**
+ * Create plugin that allows user to crop image
+ * @param - {HTMLCanvasElement} canvas - Canvas on which to build the interface
+ * @param - {DOMString} image_url - CORS safe URI of image to be cropped
+ * @param - (optional) {Number} circle_diam - Diameter of grab points in pixels - default is 30
+ * @param - (optional) {Number} line_width - Line width - default is 2
+ * @param - (optional) {DOMString} line_color - CSS color value of the crop lines - default is '#FF0000'
+ * @param - (optional) {DOMString} bg_color - CSS color value of the crop background - default is 'rgba(102, 102, 102, 0.4)'
+ */
+async function crop(canvas, image_url, circle_diam = 30, line_width = 2, line_color = '#FF0000', bg_color = 'rgba(102, 102, 102, 0.4)')
+```
+
+`crop` returns a promise which resolves to an object with 4 properties: 
 
  - `oncrop` which is a function that accepts a callback function to be called every time the crop area changes.
- - `datauri` which is afunction that returns a datauri for the cropped area.
-
-@todo: get blob method
+ - `datauri` which is a function that returns a datauri for the cropped area.
+ - `blob` which is a function that return a promise that resolves with a Blob that represents the cropped image.
+ - `destroy` which is function that destroys the cropper instance.
 
 #### Example
 
@@ -30,3 +43,5 @@ the `crop` function returns a promise which resolves to an object with 2 propert
 			});
 		});
 	</script>
+
+See also: [Cropper Demo](https://pamblam.github.io/Cropper/)

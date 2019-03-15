@@ -18,13 +18,13 @@ var crop = (function(){
 		});
 	}
 	
-	function prep_canvas(canvas, img){
+	function prep_canvas(canvas, img, line_width, line_color, bg_color){
 		canvas.width = img.width;
 		canvas.height = img.height;
 		var ctx = canvas.getContext('2d');
-		ctx.strokeStyle = '#FF0000';
-		ctx.lineWidth = 2;
-		ctx.fillStyle = "rgba(102, 102, 102, 0.4)";
+		ctx.strokeStyle = line_color;
+		ctx.lineWidth = line_width;
+		ctx.fillStyle = bg_color;
 		return ctx;
 	}
 	
@@ -33,24 +33,27 @@ var crop = (function(){
 		ctx.drawImage(img, 0, 0);
 	}
 	
-	function draw_circle(ctx, x, y){
-		var r = 15;
+	function draw_circle(ctx, x, y, circle_diam){
+		var r = circle_diam / 2;
 		ctx.beginPath();
 		ctx.arc(x, y, r, 0, 2 * Math.PI, false);
 		ctx.stroke();
 	}
 	
-	function set_crop_pos(ctx, img, leftx, topy, rightx, bottomy){
-		clearcanvas(ctx, img);
-		draw_circle(ctx, leftx, topy);
-		draw_circle(ctx, rightx, topy);
-		draw_circle(ctx, rightx, bottomy);
-		draw_circle(ctx, leftx, bottomy);
+	function set_crop_pos(ctx, img, leftx, topy, rightx, bottomy, circle_diam){
+		var scale = ctx.canvas.width / parseFloat(ctx.canvas.getBoundingClientRect().width);
+		circle_diam = circle_diam * scale;
 		
-		draw_circle(ctx, leftx, topy+((bottomy-topy)/2));
-		draw_circle(ctx, rightx, topy+((bottomy-topy)/2));
-		draw_circle(ctx, leftx+((rightx-leftx)/2), topy);
-		draw_circle(ctx, leftx+((rightx-leftx)/2), bottomy);
+		clearcanvas(ctx, img);
+		draw_circle(ctx, leftx, topy, circle_diam);
+		draw_circle(ctx, rightx, topy, circle_diam);
+		draw_circle(ctx, rightx, bottomy, circle_diam);
+		draw_circle(ctx, leftx, bottomy, circle_diam);
+		
+		draw_circle(ctx, leftx, topy+((bottomy-topy)/2), circle_diam);
+		draw_circle(ctx, rightx, topy+((bottomy-topy)/2), circle_diam);
+		draw_circle(ctx, leftx+((rightx-leftx)/2), topy, circle_diam);
+		draw_circle(ctx, leftx+((rightx-leftx)/2), bottomy, circle_diam);
 		
 		ctx.strokeRect(leftx, topy, rightx-leftx, bottomy-topy);
 		ctx.fillRect(0, 0, leftx, ctx.canvas.width); // left, full height
@@ -59,10 +62,14 @@ var crop = (function(){
 		ctx.fillRect(leftx, bottomy, rightx-leftx, ctx.canvas.height-bottomy); // bottom, remaining width
 	}
 	
-	function attach_events(ctx, img, leftx, topy, rightx, bottomy, callback){
+	function attach_events(ctx, img, leftx, topy, rightx, bottomy, circle_diam, callback){
 		var coords = {leftx, topy, rightx, bottomy};
 		var active_corner = null;
 		var lastx = 0, lasty = 0, xmovement = 0, ymovement = 0;
+		
+		var scale = ctx.canvas.width / parseFloat(ctx.canvas.getBoundingClientRect().width);
+		circle_diam = circle_diam * scale;
+		
 		const getMousePos = e => {
 			var bounds = ctx.canvas.getBoundingClientRect();
 			var scale = ctx.canvas.width / parseFloat(bounds.width);
@@ -71,10 +78,16 @@ var crop = (function(){
 			return {canvasX: x, canvasY: y};
 		};
 		
-		ctx.canvas.addEventListener('mousemove', function(event){
-			if(!active_corner) return;
-			var {canvasX, canvasY} = getMousePos(event);
-			
+		const getTouchPos = e => {
+			var bounds = ctx.canvas.getBoundingClientRect();
+			var scale = ctx.canvas.width / parseFloat(bounds.width);
+			var x = (e.touches[0].clientX - bounds.left) * scale;
+			var y = (e.touches[0].clientY - bounds.top) * scale;
+			return {canvasX: x, canvasY: y};
+		};
+
+		const onMove = pos => {
+			var {canvasX, canvasY} = pos;
 			switch(active_corner){
 				case "a":
 					xmovement = canvasX - lastx;
@@ -93,74 +106,91 @@ var crop = (function(){
 				case "tl":
 					coords.leftx = canvasX;
 					coords.topy = canvasY;
-					if(coords.rightx - coords.leftx < 60) coords.leftx = coords.rightx - 60;
-					if(coords.bottomy - coords.topy < 60) coords.topy = coords.bottomy - 60;
+					if(coords.rightx - coords.leftx < (circle_diam*2)) coords.leftx = coords.rightx - (circle_diam*2);
+					if(coords.bottomy - coords.topy < (circle_diam*2)) coords.topy = coords.bottomy - (circle_diam*2);
 					break;
 				case "cl":
 					coords.leftx = canvasX;
-					if(coords.rightx - coords.leftx < 60) coords.leftx = coords.rightx - 60;
+					if(coords.rightx - coords.leftx < (circle_diam*2)) coords.leftx = coords.rightx - (circle_diam*2);
 					break;
 				case "tr":
 					coords.rightx = canvasX;
 					coords.topy = canvasY;
-					if(coords.rightx - coords.leftx < 60) coords.rightx = coords.leftx + 60;
-					if(coords.bottomy - coords.topy < 60) coords.topy = coords.bottomy - 60;
+					if(coords.rightx - coords.leftx < (circle_diam*2)) coords.rightx = coords.leftx + (circle_diam*2);
+					if(coords.bottomy - coords.topy < (circle_diam*2)) coords.topy = coords.bottomy - (circle_diam*2);
 					break;
 				case "tc":
 					coords.topy = canvasY;
-					if(coords.bottomy - coords.topy < 60) coords.topy = coords.bottomy - 60;
+					if(coords.bottomy - coords.topy < (circle_diam*2)) coords.topy = coords.bottomy - (circle_diam*2);
 					break;
 				case "br":
 					coords.rightx = canvasX;
 					coords.bottomy = canvasY;
-					if(coords.rightx - coords.leftx < 60) coords.rightx = coords.leftx + 60;
-					if(coords.bottomy - coords.topy < 60) coords.bottomy = coords.topy + 60;
+					if(coords.rightx - coords.leftx < (circle_diam*2)) coords.rightx = coords.leftx + (circle_diam*2);
+					if(coords.bottomy - coords.topy < (circle_diam*2)) coords.bottomy = coords.topy + (circle_diam*2);
 					break;
 				case "cr":
 					coords.rightx = canvasX;
-					if(coords.rightx - coords.leftx < 60) coords.rightx = coords.leftx + 60;
+					if(coords.rightx - coords.leftx < (circle_diam*2)) coords.rightx = coords.leftx + (circle_diam*2);
 					break;
 				case "bl":
 					coords.leftx = canvasX;
 					coords.bottomy = canvasY;
-					if(coords.bottomy - coords.topy < 60) coords.bottomy = coords.topy + 60;
-					if(coords.rightx - coords.leftx < 60) coords.leftx = coords.rightx - 60;
+					if(coords.bottomy - coords.topy < (circle_diam*2)) coords.bottomy = coords.topy + (circle_diam*2);
+					if(coords.rightx - coords.leftx < (circle_diam*2)) coords.leftx = coords.rightx - (circle_diam*2);
 					break;
 				case "bc":
 					coords.bottomy = canvasY;
-					if(coords.bottomy - coords.topy < 60) coords.bottomy = coords.topy + 60;
+					if(coords.bottomy - coords.topy < (circle_diam*2)) coords.bottomy = coords.topy + (circle_diam*2);
 					break;
 			}
-			set_crop_pos(ctx, img, coords.leftx, coords.topy, coords.rightx, coords.bottomy);
+			set_crop_pos(ctx, img, coords.leftx, coords.topy, coords.rightx, coords.bottomy, circle_diam);
 			callback(coords);
-		});
+		};
 		
-		ctx.canvas.addEventListener('mousedown', function(event){
-			var {canvasX, canvasY} = getMousePos(event);
+		const onDown = pos => {
+			var {canvasX, canvasY} = pos;
 			var horiz_edge = null;
 			var vert_edge = null;
-			if(Math.abs(coords.topy - canvasY) <= 15) horiz_edge = 't';
-			if(Math.abs(coords.bottomy - canvasY) <= 15) horiz_edge = 'b';
-			if(Math.abs(coords.topy+((coords.bottomy-coords.topy)/2) - canvasY) <= 15) horiz_edge = 'c';
-			if(Math.abs(coords.leftx - canvasX) <= 15) vert_edge = 'l';
-			if(Math.abs(coords.rightx - canvasX) <= 15) vert_edge = 'r';
-			if(Math.abs(coords.leftx+((coords.rightx-coords.leftx)/2) - canvasX) <= 15) vert_edge = 'c';
+			if(Math.abs(coords.topy - canvasY) <= (circle_diam/2)) horiz_edge = 't';
+			if(Math.abs(coords.bottomy - canvasY) <= (circle_diam/2)) horiz_edge = 'b';
+			if(Math.abs(coords.topy+((coords.bottomy-coords.topy)/2) - canvasY) <= (circle_diam/2)) horiz_edge = 'c';
+			if(Math.abs(coords.leftx - canvasX) <= (circle_diam/2)) vert_edge = 'l';
+			if(Math.abs(coords.rightx - canvasX) <= (circle_diam/2)) vert_edge = 'r';
+			if(Math.abs(coords.leftx+((coords.rightx-coords.leftx)/2) - canvasX) <= (circle_diam/2)) vert_edge = 'c';
 			if(horiz_edge && vert_edge) active_corner = horiz_edge+vert_edge;
 			else if(canvasX > coords.leftx && canvasX < coords.rightx && canvasY > coords.topy && canvasY < coords.bottomy){
 				active_corner = 'a';
 				lastx = canvasX;
 				lasty = canvasY;
 			}
-		});
+		};
 		
-		document.addEventListener('mouseup', function(event){
-			active_corner = null;
-		});
+		function onMouseMove(event){ if(active_corner) onMove(getMousePos(event)); }
+		ctx.canvas.addEventListener('mousemove', onMouseMove);
 		
-		ctx.canvas.addEventListener('mouseout', function(event){
-			active_corner = null;
-		});
+		function onTouchMove(event){ if(active_corner) onMove(getTouchPos(event)); }
+		ctx.canvas.addEventListener('touchmove', onTouchMove);
 		
+		function onMouseDown(event){ onDown(getMousePos(event)); }
+		ctx.canvas.addEventListener('mousedown', onMouseDown);
+		
+		function onTouchStart(event){ onDown(getTouchPos(event)); }
+		ctx.canvas.addEventListener('touchstart', onTouchStart);
+		
+		function onUp(){ active_corner = null; }
+		document.addEventListener('touchend', onUp);
+		document.addEventListener('mouseup', onUp);
+		
+		return function destroy(){
+			clearcanvas(ctx, img);
+			ctx.canvas.removeEventListener('mousemove', onMouseMove);
+			ctx.canvas.removeEventListener('touchmove', onTouchMove);
+			ctx.canvas.removeEventListener('mousedown', onMouseDown);
+			ctx.canvas.removeEventListener('touchstart', onTouchStart);
+			document.removeEventListener('touchend', onUp);
+			document.removeEventListener('mouseup', onUp);
+		};
 	}
 	
 	function datauri(img, leftx, topy, rightx, bottomy){
@@ -172,23 +202,34 @@ var crop = (function(){
 		return canvas.toDataURL();
 	}
 	
-	return async function crop(canvas, image_url){
+	function blob(img, leftx, topy, rightx, bottomy){
+		var canvas = document.createElement('canvas');
+		canvas.width = rightx-leftx;
+		canvas.height = bottomy-topy;
+		var ctx = canvas.getContext('2d');
+		ctx.drawImage(img, leftx, topy, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+		return new Promise(cb => canvas.toBlob(cb));
+	}
+	
+	return async function crop(canvas, image_url, circle_diam = 30, line_width = 2, line_color = '#FF0000', bg_color = 'rgba(102, 102, 102, 0.4)'){
 		var img = await load_image(image_url);
-		var ctx = prep_canvas(canvas, img);
+		var ctx = prep_canvas(canvas, img, line_width, line_color, bg_color);
 		var leftx = img.width/3;
 		var topy = img.height/3;
 		var rightx = (img.width/3)*2;
 		var bottomy = (img.height/3)*2;
-		set_crop_pos(ctx, img, leftx, topy, rightx, bottomy);
+		set_crop_pos(ctx, img, leftx, topy, rightx, bottomy, circle_diam);
 		var oncrop = ()=>{};
-		attach_events(ctx, img, leftx, topy, rightx, bottomy, coords => {
+		const destroy = attach_events(ctx, img, leftx, topy, rightx, bottomy, circle_diam, coords => {
 			({leftx, topy, rightx, bottomy} = coords);
 			oncrop();
 		});
 		return {
 			oncrop: cb => oncrop = cb,
-			datauri: () => datauri(img, leftx, topy, rightx, bottomy)
-		}
+			datauri: () => datauri(img, leftx, topy, rightx, bottomy),
+			blob: () => blob(img, leftx, topy, rightx, bottomy),
+			destroy: destroy
+		};
 	};
 	
 })();
