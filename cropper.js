@@ -183,6 +183,7 @@ var crop = (function(){
 				lastx = canvasX;
 				lasty = canvasY;
 			}
+			if(active_corner) onDownCallback();
 		};
 		
 		function onMouseMove(event){ if(active_corner) onMove(getMousePos(event)); }
@@ -197,7 +198,10 @@ var crop = (function(){
 		function onTouchStart(event){ onDown(getTouchPos(event)); }
 		ctx.canvas.addEventListener('touchstart', onTouchStart);
 		
-		function onUp(){ active_corner = null; }
+		function onUp(){ 
+			active_corner = null; 
+			onUpCallback(); 
+		}
 		document.addEventListener('touchend', onUp);
 		document.addEventListener('mouseup', onUp);
 		
@@ -215,7 +219,7 @@ var crop = (function(){
 				if(typeof callback !== 'function') return;
 				onDownCallback = callback;
 			},
-			onUp: function onUp(){
+			onUp: function onUp(callback){
 				if(typeof callback !== 'function') return;
 				onUpCallback = callback;
 			}

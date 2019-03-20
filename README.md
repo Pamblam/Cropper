@@ -35,15 +35,15 @@ async function crop(canvas, image_url, circle_diam = 30, line_width = 2, line_co
 Setting the [touch-action](https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action) style may be enough, but if the canvas is in a modal you may need to stop the modal from scrolling as well.
 
 ```
-cropper.ondown = ()=> {
-	ctx.canvas.style.touchAction = 'none';
-	document.getElementById('scan-card-modal').style.overflowY = 'none';
-};
+cropper.ondown(()=>{
+	canvas.style.touchAction = 'none';
+	modal.style.overflowY = 'none';
+});
 
-cropper.onup = ()=> {
-	ctx.canvas.style.touchAction = null;
-	document.getElementById('scan-card-modal').style.overflowY = null;
-};
+cropper.onup(()=>{
+	canvas.style.touchAction = null;
+	modal.style.overflowY = null;
+});
 ```
 
 #### Example
