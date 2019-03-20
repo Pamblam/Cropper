@@ -37,7 +37,7 @@ Setting the [touch-action](https://developer.mozilla.org/en-US/docs/Web/CSS/touc
 ```
 cropper.ondown(()=>{
 	canvas.style.touchAction = 'none';
-	modal.style.overflowY = 'none';
+	modal.style.overflowY = 'hidden';
 });
 
 cropper.onup(()=>{
