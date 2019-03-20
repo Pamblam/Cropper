@@ -18,12 +18,24 @@ var crop = (function(){
 		});
 	}
 	
-	function prep_canvas(canvas, img, line_width, line_color, bg_color){
-		var scale = canvas.width / parseFloat(canvas.getBoundingClientRect().width);
-		
+	function waitForCanvasWidth(canvas){
+		return new Promise(done=>{
+			const wait = () => {
+				setTimeout(() => {
+					if(canvas.getBoundingClientRect().width > 0) return done();
+					wait();
+				}, 10);
+			};
+			wait();
+		});
+	}
+	
+	async function prep_canvas(canvas, img, line_width, line_color, bg_color){
 		canvas.width = img.width;
 		canvas.height = img.height;
+		await waitForCanvasWidth(canvas);
 		var ctx = canvas.getContext('2d');
+		var scale = canvas.width / canvas.getBoundingClientRect().width;
 		ctx.strokeStyle = line_color;
 		ctx.lineWidth = line_width * scale;
 		ctx.fillStyle = bg_color;
@@ -90,6 +102,9 @@ var crop = (function(){
 			var {canvasX, canvasY} = pos;
 			
 			var scaled_circle_diam = (ctx.canvas.width / parseFloat(ctx.canvas.getBoundingClientRect().width)) * circle_diam;
+			
+			var onDownCallback = ()=>{};
+			var onUpCallback = ()=>{};
 			
 			switch(active_corner){
 				case "a":
@@ -168,7 +183,6 @@ var crop = (function(){
 				lastx = canvasX;
 				lasty = canvasY;
 			}
-			if(active_corner) ctx.canvas.style.touchAction = 'none';
 		};
 		
 		function onMouseMove(event){ if(active_corner) onMove(getMousePos(event)); }
@@ -183,18 +197,28 @@ var crop = (function(){
 		function onTouchStart(event){ onDown(getTouchPos(event)); }
 		ctx.canvas.addEventListener('touchstart', onTouchStart);
 		
-		function onUp(){ active_corner = null; ctx.canvas.style.touchAction = null; }
+		function onUp(){ active_corner = null; }
 		document.addEventListener('touchend', onUp);
 		document.addEventListener('mouseup', onUp);
 		
-		return function destroy(){
-			clearcanvas(ctx, img);
-			ctx.canvas.removeEventListener('mousemove', onMouseMove);
-			ctx.canvas.removeEventListener('touchmove', onTouchMove);
-			ctx.canvas.removeEventListener('mousedown', onMouseDown);
-			ctx.canvas.removeEventListener('touchstart', onTouchStart);
-			document.removeEventListener('touchend', onUp);
-			document.removeEventListener('mouseup', onUp);
+		return {
+			destroy: function destroy(){
+				clearcanvas(ctx, img);
+				ctx.canvas.removeEventListener('mousemove', onMouseMove);
+				ctx.canvas.removeEventListener('touchmove', onTouchMove);
+				ctx.canvas.removeEventListener('mousedown', onMouseDown);
+				ctx.canvas.removeEventListener('touchstart', onTouchStart);
+				document.removeEventListener('touchend', onUp);
+				document.removeEventListener('mouseup', onUp);
+			},
+			onDown: function onDown(callback){
+				if(typeof callback !== 'function') return;
+				onDownCallback = callback;
+			},
+			onUp: function onUp(){
+				if(typeof callback !== 'function') return;
+				onUpCallback = callback;
+			}
 		};
 	}
 	
@@ -218,22 +242,27 @@ var crop = (function(){
 	
 	return async function crop(canvas, image_url, circle_diam = 30, line_width = 2, line_color = '#FF0000', bg_color = 'rgba(102, 102, 102, 0.4)'){
 		var img = await load_image(image_url);
-		var ctx = prep_canvas(canvas, img, line_width, line_color, bg_color);
+		var ctx = await prep_canvas(canvas, img, line_width, line_color, bg_color);
 		var leftx = img.width/3;
 		var topy = img.height/3;
 		var rightx = (img.width/3)*2;
 		var bottomy = (img.height/3)*2;
+		
 		set_crop_pos(ctx, img, leftx, topy, rightx, bottomy, circle_diam);
+		
 		var oncrop = ()=>{};
-		const destroy = attach_events(ctx, img, leftx, topy, rightx, bottomy, circle_diam, coords => {
+		const cropper = attach_events(ctx, img, leftx, topy, rightx, bottomy, circle_diam, coords => {
 			({leftx, topy, rightx, bottomy} = coords);
 			oncrop();
 		});
+		
 		return {
 			oncrop: cb => oncrop = cb,
 			datauri: () => datauri(img, leftx, topy, rightx, bottomy),
 			blob: () => blob(img, leftx, topy, rightx, bottomy),
-			destroy: destroy
+			destroy: cropper.destroy,
+			ondown: cropper.onDown,
+			onup: cropper.onUp
 		};
 	};
 	

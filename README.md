@@ -21,12 +21,30 @@ The plugin exposes a single function: `crop`:
 async function crop(canvas, image_url, circle_diam = 30, line_width = 2, line_color = '#FF0000', bg_color = 'rgba(102, 102, 102, 0.4)')
 ```
 
-`crop` returns a promise which resolves to an object with 4 properties: 
+`crop` returns a promise which resolves to an object with 6 properties: 
 
  - `oncrop` which is a function that accepts a callback function to be called every time the crop area changes.
+ - `ondown` which is a function that accepts a callback function to be called every time a mousedown or tochstart event occurs within the crop area.
+ - `onup` which is a function that accepts a callback function to be called every time a mouseup or tochend event occurs within the crop area.
  - `datauri` which is a function that returns a datauri for the cropped area.
  - `blob` which is a function that return a promise that resolves with a Blob that represents the cropped image.
  - `destroy` which is function that destroys the cropper instance.
+
+#### Prevent scrolling on mobile devices when cropping
+
+Setting the [touch-action](https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action) style may be enough, but if the canvas is in a modal you may need to stop the modal from scrolling as well.
+
+```
+cropper.ondown = ()=> {
+	ctx.canvas.style.touchAction = 'none';
+	document.getElementById('scan-card-modal').style.overflowY = 'none';
+};
+
+cropper.onup = ()=> {
+	ctx.canvas.style.touchAction = null;
+	document.getElementById('scan-card-modal').style.overflowY = null;
+};
+```
 
 #### Example
 
