@@ -82,6 +82,9 @@ var crop = (function(){
 		var active_corner = null;
 		var lastx = 0, lasty = 0, xmovement = 0, ymovement = 0;
 		
+		var onDownCallback = ()=>{};
+		var onUpCallback = ()=>{};
+		
 		const getMousePos = e => {
 			var bounds = ctx.canvas.getBoundingClientRect();
 			var scale = ctx.canvas.width / parseFloat(bounds.width);
@@ -102,9 +105,6 @@ var crop = (function(){
 			var {canvasX, canvasY} = pos;
 			
 			var scaled_circle_diam = (ctx.canvas.width / parseFloat(ctx.canvas.getBoundingClientRect().width)) * circle_diam;
-			
-			var onDownCallback = ()=>{};
-			var onUpCallback = ()=>{};
 			
 			switch(active_corner){
 				case "a":
@@ -271,5 +271,4 @@ var crop = (function(){
 	};
 	
 })();
-
 
